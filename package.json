@@ -6,7 +6,7 @@
   "description": "提审台 —— 局域网提审、审核与交付工具",
   "scripts": {
     "start": "node server/main.js",
-    "selftest": "node selftest.js"
+    "selftest": "node --test net-selftest.js && node selftest.js"
   },
   "engines": {
     "node": ">=18"

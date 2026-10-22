@@ -48,7 +48,7 @@ ${alt}
 `;
 }
 
-// 证书已存在则复用；否则调用 openssl 生成（macOS / Git Bash / Linux 均自带）
+// 证书已存在则复用；否则调用 OpenSSL。Windows 的 Git 通常未将其加入 PATH。
 export async function ensureCert(certsDir, ips) {
   const keyP = path.join(certsDir, 'key.pem');
   const certP = path.join(certsDir, 'cert.pem');
@@ -60,10 +60,26 @@ export async function ensureCert(certsDir, ips) {
   const cfgP = path.join(certsDir, 'openssl.cnf');
   await fsp.mkdir(certsDir, { recursive: true });
   await fsp.writeFile(cfgP, certConfig('lan-review', ips), 'utf8');
-  await pexec('openssl', [
+  const args = [
     'req', '-x509', '-newkey', 'rsa:2048', '-sha256', '-days', '3650', '-nodes',
     '-config', cfgP, '-keyout', keyP, '-out', certP,
-  ], { windowsHide: true });
+  ];
+  try {
+    await pexec('openssl', args, { windowsHide: true });
+  } catch (error) {
+    if (error.code !== 'ENOENT' || process.platform !== 'win32') throw error;
+    const candidates = [
+      process.env.ProgramFiles && path.join(process.env.ProgramFiles, 'Git', 'usr', 'bin', 'openssl.exe'),
+      process.env['ProgramFiles(x86)'] && path.join(process.env['ProgramFiles(x86)'], 'Git', 'usr', 'bin', 'openssl.exe'),
+      process.env.LOCALAPPDATA && path.join(process.env.LOCALAPPDATA, 'Programs', 'Git', 'usr', 'bin', 'openssl.exe'),
+    ].filter(Boolean);
+    let executable;
+    for (const candidate of candidates) {
+      try { await fsp.access(candidate); executable = candidate; break; } catch { /* 下一个常用安装目录 */ }
+    }
+    if (!executable) throw new Error('未找到 OpenSSL，请安装 OpenSSL 并加入 PATH，或安装 Git for Windows 后重试。');
+    await pexec(executable, args, { windowsHide: true });
+  }
   const [key, cert] = await Promise.all([fsp.readFile(keyP), fsp.readFile(certP)]);
   return { key: key.toString(), cert: cert.toString(), generated: true };
 }

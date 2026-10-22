@@ -11,6 +11,8 @@
 
 前提：设备已安装 [Node.js](https://nodejs.org)（LTS 版本即可，无需执行任何 npm 命令）。
 
+正式交付的 HTTPS 通道还需要 OpenSSL。可安装 OpenSSL 并加入 PATH；Windows 也会自动查找 Git for Windows 常用安装目录内的 OpenSSL。缺少时审核页仍可启动，但正式交付通道不可用，控制台会说明原因。
+
 启动后：
 
 - 创作者页面自动打开 `http://localhost:8456/`（端口被占用时自动顺延，以窗口里打印的地址为准）
